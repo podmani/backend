@@ -2,8 +2,12 @@ package org.example;
 
 import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
+import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.builder.ResponseSpecBuilder;
+import io.restassured.http.ContentType;
 import io.restassured.http.Method;
 import io.restassured.response.Response;
+import org.hamcrest.Matchers;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,60 +20,54 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.*;
 
 public class MaxTest {
 
-    static Map<String, String> headers = new HashMap<>();
-
-    static Properties prop = new Properties();
-
-
-    @BeforeAll
+        @BeforeAll
 static void setup () throws IOException {
 
         RestAssured.baseURI = "https://reqres.in/api";
-
-       // RestAssured.filters(new AllureRestAssured());
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-       // FileInputStream fis;
-     //   fis = new FileInputStream("src/test/resources/my.properties");
 
-      //  prop.load(fis);
+        responseSpecification = new ResponseSpecBuilder()
+                .expectStatusCode(200)
+                .expectStatusLine("HTTP/1.1 200 OK")
+                .expectContentType(ContentType.JSON)
+                .expectResponseTime(Matchers.lessThan(5000L))
+                .expectHeader("Access-Control-Allow-Credentials", "true")
+                .build();
+
+        requestSpecification = new RequestSpecBuilder()
+                .setAccept(ContentType.JSON)
+                .setContentType(ContentType.ANY)
+                .build();
+
+
     }
 
     @Test
     void getListUsersTest() {
-        given()
-                .headers(headers)
-                .log()
-                .all()
+        given(requestSpecification)
                 .when()
                 .get("https://reqres.in/api/users?page=1")
                 .prettyPeek()
-                .then()
-                .statusCode(200);
+                .then().spec(responseSpecification);
     }
 
     @Test
     void getSingleUserTest() {
-        given()
-                .headers(headers)
-                .log()
-                .all()
+        given(requestSpecification)
                 .when()
                 .request(Method.GET, "https://reqres.in/api/users/2")
                 .prettyPeek()
-                .then()
-                .statusCode(200);
+                .then().spec(responseSpecification);
+
     }
 
     @Test
     void getSingleUserNotFoundTest() {
-        given()
-                .headers(headers)
-                .log()
-                .all()
+        given(requestSpecification)
                 .when()
                 .request(Method.GET, "https://reqres.in/api/users/23")
                 .prettyPeek()
@@ -79,36 +77,26 @@ static void setup () throws IOException {
 
     @Test
     void getListResourceTest() {
-        given()
-                .headers(headers)
-                .log()
-                .all()
+        given(requestSpecification)
                 .when()
                 .request(Method.GET, "https://reqres.in/api/unknown")
                 .prettyPeek()
-                .then()
-                .statusCode(200);
+                .then().spec(responseSpecification);
     }
 
     @Test
     void getSingleResourceTest() {
-        given()
-                .headers(headers)
-                .log()
-                .all()
+        given(requestSpecification)
                 .when()
                 .request(Method.GET, "https://reqres.in/api/unknown/2")
                 .prettyPeek()
-                .then()
-                .statusCode(200);
+                .then().spec(responseSpecification);
+
     }
 
     @Test
     void getSingleResourceNotFoundTest() {
-        given()
-                .headers(headers)
-                .log()
-                .all()
+        given(requestSpecification)
                 .when()
                 .request(Method.GET, "https://reqres.in/api/unknown/23")
                 .prettyPeek()
@@ -119,20 +107,19 @@ static void setup () throws IOException {
     @Test
     void createUserTest() {
 
-        JSONObject jsonObj = new JSONObject()
-                .put("id","88")
-                .put("email","admin@f1.nnov.ru")
-                .put("first_name", "Gzegosh")
-                .put("last_name", "Kryhovyak")
-                .put("avatar", "https://reqres.in/img/faces/5-image.jpg");
+            MaxDTO maxDTO = new MaxDTO();
+            maxDTO.setId("88");
+            maxDTO.setEmail("admin@f1.nnov.ru");
+            maxDTO.setFirstName("Matvey");
+            maxDTO.setLastName("Safronov");
+            maxDTO.setAvatar("https://reqres.in/img/faces/5-image.jpg");
+
 
         Response response = given()
-
-                .header("Content-type", "application/json")
-                .body(jsonObj.toString())
                 .log()
-                .body()
-                .when()
+                .all()
+                .contentType("application/json")
+                .when().body(maxDTO)
                 .post("/users")
                 .prettyPeek()
                 .then()
@@ -140,38 +127,32 @@ static void setup () throws IOException {
 
         Assertions.assertEquals(201, response.statusCode());
         Assertions.assertEquals("admin@f1.nnov.ru", response.jsonPath().getString("email"));
-        Assertions.assertEquals("Gzegosh", response.jsonPath().getString("first_name"));
-        Assertions.assertEquals("Kryhovyak", response.jsonPath().getString("last_name"));
+        Assertions.assertEquals("Matvey", response.jsonPath().getString("first_name"));
+        Assertions.assertEquals("Safronov", response.jsonPath().getString("last_name"));
         Assertions.assertEquals("88", response.jsonPath().getString("id"));
     }
 
     @Test
     void updateUserTest() {
 
-        JSONObject jsonObj = new JSONObject()
-                .put("id","88")
-                .put("email","result@f1.nnov.ru")
-                .put("first_name", "Petr")
-                .put("last_name", "Ivanov")
-                .put("avatar", "https://reqres.in/img/faces/4-image.jpg");
+        MaxDTO maxDTO = new MaxDTO();
+        maxDTO.setId("88");
+        maxDTO.setEmail("result@f1.nnov.ru");
+        maxDTO.setFirstName("Petr");
+        maxDTO.setLastName("Ivanov");
+        maxDTO.setAvatar("https://reqres.in/img/faces/4-image.jpg");
 
-        Response response = given()
 
+                 given()
                 .header("Content-type", "application/json")
-                .body(jsonObj.toString())
+                .body(maxDTO)
                 .log()
                 .body()
                 .when()
                 .put("/users/2")
                 .prettyPeek()
-                .then()
-                .extract().response();
+                .then().spec(responseSpecification);
 
-        Assertions.assertEquals(200, response.statusCode());
-        Assertions.assertEquals("result@f1.nnov.ru", response.jsonPath().getString("email"));
-        Assertions.assertEquals("Petr", response.jsonPath().getString("first_name"));
-        Assertions.assertEquals("Ivanov", response.jsonPath().getString("last_name"));
-        Assertions.assertEquals("88", response.jsonPath().getString("id"));
     }
 
     @Test
